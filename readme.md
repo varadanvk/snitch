@@ -2,7 +2,7 @@
 
 ### Description
 
-`snitch` is a local AI productivity watchdog that monitors your screen activity and calls you out when you're not focused. Using edge AI, it runs entirely on your device, analyzing your screen in real-time to determine if you're actually working. When it catches you slacking, it generates sassy, personalized notifications to get you back on track. Optional "snitch mode" lets you add accountability buddies who receive text updates about your procrastination habits.
+`snitch` is a local AI productivity watchdog that monitors your screen activity and calls you out when you're not focused. Using edge AI, it runs entirely on your device, analyzing your screen in real-time to determine if you're actually working. When it catches you slacking, it generates personalized notifications to get you back on track. Optional "snitch mode" lets you add accountability buddies who receive text updates about your procrastination habits.
 
 ### Key Features:
 
@@ -19,8 +19,6 @@
 - CustomTkinter for UI
 - Screen capture and analysis
 - Optional Twilio integration for accountability texts
-
-Think of it as a judgmental AI assistant that lives on your desktop and isn't afraid to call you out for checking Twitter for the 15th time in an hour.
 
 ### Project Structure
 
