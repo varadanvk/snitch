@@ -33,12 +33,13 @@
    pip install -r requirements.txt
    ```
 
-4. Install Ollama for AI-powered screen analysis:
+4. Install Ollama (required) for AI-powered screen analysis:
    ```bash
    # Follow instructions at https://ollama.ai/
    # After installing, pull a vision-capable model:
    ollama pull llava
-   # or any other multimodal model that supports images
+   # Start the Ollama service:
+   ollama serve
    ```
 
 5. (Optional) For accountability features, create a `.env` file with your Twilio credentials:

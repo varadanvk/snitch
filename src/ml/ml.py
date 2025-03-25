@@ -78,13 +78,20 @@ class OllamaInterface:
             if response.status_code == 200:
                 # Check if the model exists
                 models = response.json().get("models", [])
-                model_exists = any(model.get("name", "").startswith(self.model.split(":")[0]) for model in models)
-                
+                model_exists = any(
+                    model.get("name", "").startswith(self.model.split(":")[0])
+                    for model in models
+                )
+
                 if not model_exists:
-                    logger.warning(f"Model {self.model} not found. Please run 'ollama pull {self.model}'")
-                    logger.warning("Using a vision-capable model like 'llava' is recommended")
+                    logger.warning(
+                        f"Model {self.model} not found. Please run 'ollama pull {self.model}'"
+                    )
+                    logger.warning(
+                        "Using a vision-capable model like 'llava' is recommended"
+                    )
                     # We still return True since Ollama is available, even if the model isn't
-                
+
                 return True
             return False
         except requests.RequestException:
@@ -133,14 +140,16 @@ class OllamaInterface:
             logger.error(f"Error starting Ollama: {e}")
             return False
 
-    def generate_analysis(self, prompt: str, image_data: Optional[np.ndarray] = None) -> str:
+    def generate_analysis(
+        self, prompt: str, image_data: Optional[np.ndarray] = None
+    ) -> str:
         """
         Generate text using Ollama, optionally with an image.
-        
+
         Args:
             prompt: Text prompt for the model
             image_data: Optional numpy array containing image data
-        
+
         Returns:
             The model's response as a string
         """
@@ -148,32 +157,32 @@ class OllamaInterface:
             # Fallback to simple response if Ollama is not available
             logger.warning("Using fallback responses since Ollama is not available")
             return "Ollama is not available for advanced analysis."
-            
+
         try:
             payload = {
                 "model": self.model,
                 "prompt": prompt,
                 "stream": False,
             }
-            
+
             # If image is provided, encode it as base64 and add to the payload
             if image_data is not None:
                 import base64
                 from io import BytesIO
-                
+
                 # Convert numpy array to PIL Image
                 image = Image.fromarray(image_data)
-                
+
                 # Convert PIL image to base64 string
                 buffered = BytesIO()
                 image.save(buffered, format="JPEG")
                 img_str = base64.b64encode(buffered.getvalue()).decode()
-                
+
                 # Add image to payload with proper format for Ollama
                 payload["images"] = [img_str]
-                
+
                 logger.info("Sending image to Ollama for analysis")
-            
+
             response = requests.post(
                 f"{self.base_url}/generate",
                 json=payload,
@@ -181,6 +190,7 @@ class OllamaInterface:
 
             if response.status_code == 200:
                 result = response.json()
+                logger.info(f"Ollama response: {result}")
                 return result.get("response", "")
             else:
                 logger.error(f"Error from Ollama API: {response.text}")
@@ -200,59 +210,91 @@ class ScreenAnalyzer:
     def analyze_screenshot(self, screenshot: np.ndarray) -> Dict[str, Any]:
         """
         Analyze a screenshot to determine what the user is doing.
-        Uses Ollama to analyze the image if available.
+        Uses Ollama to analyze the image.
         """
-        # Try to use Ollama with the image for analysis
-        if self.ollama.is_available or self.ollama.start_ollama_if_needed():
-            try:
-                # Prepare prompt for vision model analysis
-                prompt = """
-                Analyze this screenshot of my computer screen. What activity am I doing?
-                Is it productive work or a distraction? Please be specific about what you see.
-                Format your response as JSON with these fields:
-                {  
-                    "activity_type": "productive" or "distracting",
-                    "activity": "specific activity description",
-                    "confidence": 0.0 to 1.0,
-                    "reasoning": "brief explanation"
-                }
-                """
-                
-                # Send the image to Ollama
-                response = self.ollama.generate_analysis(prompt, screenshot)
-                
-                try:
-                    # Parse the response as JSON
-                    result = json.loads(response)
-                    logger.info(f"Ollama screenshot analysis: {result}")
-                    return result
-                except json.JSONDecodeError:
-                    # If response isn't valid JSON, try to extract JSON pattern
-                    import re
-                    json_pattern = re.search(r'\{[\s\S]*\}', response)
-                    if json_pattern:
-                        try:
-                            result = json.loads(json_pattern.group(0))
-                            return result
-                        except:
-                            pass
-                    
-                    logger.warning(f"Could not parse Ollama response as JSON: {response[:100]}...")
-            except Exception as e:
-                logger.error(f"Error using Ollama for screenshot analysis: {e}")
+        # Check if Ollama is available and start it if needed
+        if not (self.ollama.is_available or self.ollama.start_ollama_if_needed()):
+            logger.error("Ollama is required but not available. Please install and start Ollama.")
+            return {
+                "activity_type": "unknown",
+                "activity": "Ollama not available",
+                "confidence": 0.0,
+                "reasoning": "Please install Ollama to use this feature."
+            }
         
-        # Fallback to simulated analysis if Ollama failed or isn't available
-        logger.info("Using fallback simulated analysis")
-        activity_type = random.choice(["productive", "distracting"])
-        activity = random.choice(ACTIVITY_CLASSES[activity_type])
-        confidence = random.uniform(0.7, 0.98)
-
-        return {
-            "activity_type": activity_type,
-            "activity": activity,
-            "confidence": confidence,
-            "reasoning": "Fallback analysis (Ollama not available)"
-        }
+        try:
+            # Prepare prompt for vision model analysis - request plain text response
+            prompt = """
+            Analyze this screenshot of my computer screen. What activity am I doing?
+            Is it productive work or a distraction? Please be specific about what you see.
+            
+            First, determine if the activity is 'productive' or 'distracting'.
+            Then, provide a brief specific description of the activity you see.
+            
+            Respond in plain text with a concise answer in this format:
+            ACTIVITY TYPE: [productive/distracting]
+            ACTIVITY: [brief description of what you see]
+            REASONING: [brief explanation of why you classified it this way]
+            """
+            
+            # Send the image to Ollama
+            response = self.ollama.generate_analysis(prompt, screenshot)
+            logger.info(f"Received Ollama analysis: {response[:100]}...")
+            
+            # Parse the plain text response
+            activity_type = "unknown"
+            activity = "unspecified activity"
+            reasoning = ""
+            
+            # Extract information from the response using simple parsing
+            for line in response.split('\n'):
+                line = line.strip()
+                if line.lower().startswith("activity type:") or line.lower().startswith("activity type ="):
+                    activity_type_text = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+                    if "productive" in activity_type_text.lower():
+                        activity_type = "productive"
+                    elif "distracting" in activity_type_text.lower():
+                        activity_type = "distracting"
+                
+                elif line.lower().startswith("activity:") or line.lower().startswith("activity ="):
+                    activity = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+                
+                elif line.lower().startswith("reasoning:") or line.lower().startswith("reasoning ="):
+                    reasoning = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+            
+            # If we couldn't parse properly, try to infer from the whole response
+            if activity_type == "unknown":
+                if "productive" in response.lower():
+                    activity_type = "productive"
+                elif "distracting" in response.lower():
+                    activity_type = "distracting"
+            
+            if not activity or activity == "unspecified activity":
+                # Try to extract an activity from the response
+                if "you are" in response.lower() or "user is" in response.lower():
+                    activity_parts = [part for part in response.split(".") if "you are" in part.lower() or "user is" in part.lower()]
+                    if activity_parts:
+                        activity = activity_parts[0].strip()
+            
+            # Create a structured result from the parsed text
+            result = {
+                "activity_type": activity_type,
+                "activity": activity,
+                "confidence": 0.8,  # Fixed confidence since we can't easily extract this
+                "reasoning": reasoning or response[:150]  # Use part of the response if no specific reasoning found
+            }
+            
+            logger.info(f"Parsed analysis: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error using Ollama for screenshot analysis: {e}")
+            return {
+                "activity_type": "error",
+                "activity": "error analyzing screen",
+                "confidence": 0.0,
+                "reasoning": f"Error: {str(e)}"
+            }
 
     def get_detailed_analysis(self, screenshot: np.ndarray) -> Dict[str, Any]:
         """
@@ -261,8 +303,13 @@ class ScreenAnalyzer:
         This would be used for deeper insights, not regular monitoring.
         """
         if not self.ollama.is_available and not self.ollama.start_ollama_if_needed():
-            # Return simulated analysis if Ollama is not available
-            return self.analyze_screenshot(screenshot)
+            logger.error("Ollama is required but not available. Please install and start Ollama.")
+            return {
+                "activity_type": "unknown",
+                "activity": "Ollama not available",
+                "confidence": 0.0,
+                "reasoning": "Please install Ollama to use this feature."
+            }
 
         prompt = """
         Provide a detailed analysis of this screenshot of my computer screen:
@@ -270,51 +317,78 @@ class ScreenAnalyzer:
         2. What specific activity am I engaged in?
         3. Is this activity productive or distracting?
         4. What specific elements on screen suggest productive or distracting behavior?
-        5. How confident are you in this assessment?
         
-        Format your response as JSON with these fields:
-        {
-            "activity_type": "productive" or "distracting",
-            "activity": "specific activity description",
-            "applications": ["list", "of", "detected", "applications"],
-            "confidence": 0.0 to 1.0,
-            "reasoning": "detailed explanation",
-            "suggestions": "optional improvement suggestions if distracting"
-        }
+        Respond in plain text with a structured response in this format:
+        ACTIVITY TYPE: [productive/distracting]
+        ACTIVITY: [brief description of what you see]
+        APPLICATIONS: [comma-separated list of detected applications]
+        REASONING: [detailed explanation]
+        SUGGESTIONS: [if activity is distracting, suggestions for improvement]
         """
 
         try:
             # Send the image directly to Ollama
             response = self.ollama.generate_analysis(prompt, screenshot)
+            logger.info(f"Received detailed analysis: {response[:100]}...")
             
-            try:
-                # Parse the response as JSON
-                result = json.loads(response)
-                logger.info(f"Detailed analysis: {result}")
-                return result
-            except json.JSONDecodeError:
-                # If response isn't valid JSON, try to extract JSON pattern
-                import re
-                json_pattern = re.search(r'\{[\s\S]*\}', response)
-                if json_pattern:
-                    try:
-                        result = json.loads(json_pattern.group(0))
-                        return result
-                    except:
-                        pass
+            # Parse the plain text response
+            activity_type = "unknown"
+            activity = "unspecified activity"
+            applications = []
+            reasoning = ""
+            suggestions = ""
+            
+            # Extract information from the response using simple parsing
+            for line in response.split('\n'):
+                line = line.strip()
+                if line.lower().startswith("activity type:") or line.lower().startswith("activity type ="):
+                    activity_type_text = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+                    if "productive" in activity_type_text.lower():
+                        activity_type = "productive"
+                    elif "distracting" in activity_type_text.lower():
+                        activity_type = "distracting"
                 
-                logger.warning(f"Could not parse detailed analysis as JSON: {response[:100]}...")
-                # Create a structured response from the text
-                return {
-                    "activity_type": "unknown",
-                    "activity": "unclassified activity",
-                    "confidence": 0.5,
-                    "reasoning": f"Parsing error. Raw response: {response[:200]}..."
-                }
+                elif line.lower().startswith("activity:") or line.lower().startswith("activity ="):
+                    activity = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+                
+                elif line.lower().startswith("applications:") or line.lower().startswith("applications ="):
+                    apps_text = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+                    applications = [app.strip() for app in apps_text.split(',')]
+                
+                elif line.lower().startswith("reasoning:") or line.lower().startswith("reasoning ="):
+                    reasoning = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+                
+                elif line.lower().startswith("suggestions:") or line.lower().startswith("suggestions ="):
+                    suggestions = line.split(':', 1)[1].strip() if ':' in line else line.split('=', 1)[1].strip()
+            
+            # If we couldn't parse properly, try to infer from the whole response
+            if activity_type == "unknown":
+                if "productive" in response.lower():
+                    activity_type = "productive"
+                elif "distracting" in response.lower():
+                    activity_type = "distracting"
+            
+            # Create a structured result from the parsed text
+            result = {
+                "activity_type": activity_type,
+                "activity": activity,
+                "applications": applications,
+                "confidence": 0.8,  # Fixed confidence since we can't easily extract this
+                "reasoning": reasoning or response[:200],  # Use part of the response if no specific reasoning found
+                "suggestions": suggestions,
+            }
+            
+            logger.info(f"Parsed detailed analysis: {result}")
+            return result
+            
         except Exception as e:
             logger.error(f"Error in detailed analysis: {e}")
-            # Fall back to simpler analysis
-            return self.analyze_screenshot(screenshot)
+            return {
+                "activity_type": "error",
+                "activity": "error analyzing screen",
+                "confidence": 0.0,
+                "reasoning": f"Error: {str(e)}"
+            }
 
 
 class ActivityClassifier:
@@ -342,14 +416,9 @@ class ActivityClassifier:
         if any(app.lower() in app_name.lower() for app in self.distracting_apps):
             return False, 0.9
 
-        # For demo purposes, simulate a classification
-        # In a real app, you would use a trained model here
-        is_productive = random.choice(
-            [True, False, True]
-        )  # Slight bias toward productive
-        confidence = random.uniform(0.6, 0.85)
-
-        return is_productive, confidence
+        # If we don't know, default to neutral with low confidence
+        logger.info(f"Couldn't classify app {app_name} with title {window_title} - not in known lists")
+        return True, 0.5  # Default to assuming productive with low confidence
 
     def add_productive_app(self, app_name: str) -> None:
         """Add an app to the productive list."""
@@ -385,19 +454,32 @@ class MessageGenerator:
         context = context or {}
 
         # Try to generate using Ollama if available
-        if (
-            self.ollama.is_available and random.random() < 0.7
-        ):  # 70% chance to use Ollama
+        if self.ollama.is_available:
             try:
                 task = context.get("current_task", "your task")
                 activity = context.get("activity", "something")
-
-                prompt = f"""
-                Generate a short, friendly but sassy notification to the user who is supposed 
-                to be working on "{task}" but is actually {activity}. 
-                Keep it under 100 characters, be motivational but with a touch of humor.
-                Don't use hashtags or emojis.
-                """
+                
+                # Different prompts based on the message type
+                if message_type == "distracted":
+                    prompt = f"""
+                    Generate a short, friendly but sassy notification to the user who is supposed 
+                    to be working on "{task}" but is actually {activity}. 
+                    Keep it under 100 characters, be motivational but with a touch of humor.
+                    Don't use hashtags or emojis.
+                    """
+                elif message_type == "productive":
+                    prompt = f"""
+                    Generate a short, friendly encouraging notification to the user who is 
+                    successfully working on "{task}" and being productive with {activity}.
+                    Keep it under 100 characters, be positive and motivational.
+                    Don't use hashtags or emojis.
+                    """
+                else:  # reminder
+                    prompt = f"""
+                    Generate a short, friendly reminder that the user should be working on "{task}".
+                    Keep it under 100 characters and be motivational but gentle.
+                    Don't use hashtags or emojis.
+                    """
 
                 response = self.ollama.generate_analysis(prompt, None)
 
