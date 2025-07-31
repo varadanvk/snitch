@@ -4,3 +4,8 @@
 *.pyd
 *.pyw
 *.pyz
+.crush
+
+.env
+.DS_Store
+CRUSH.md
