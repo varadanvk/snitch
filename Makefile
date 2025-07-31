@@ -10,16 +10,22 @@ all: build
 
 # Build the application
 build:
+	@echo "Building snitch binary..."
 	go build $(BUILD_FLAGS) -o $(BINARY_PATH) .
+	@echo "✓ Build complete: $(BINARY_PATH)"
 
 # Clean build artifacts
 clean:
+	@echo "Cleaning build artifacts..."
 	go clean
 	rm -f $(BINARY_PATH)
+	@echo "✓ Clean complete"
 
 # Install the application globally
 install:
+	@echo "Installing snitch globally..."
 	go install $(BUILD_FLAGS)
+	@echo "✓ Installed to $(shell go env GOPATH)/bin/snitch"
 
 # Uninstall the application
 uninstall:
@@ -35,10 +41,16 @@ run: build
 
 # Build for multiple platforms
 build-all:
+	@echo "Building for multiple platforms..."
+	@echo "  → Linux AMD64..."
 	GOOS=linux GOARCH=amd64 go build $(BUILD_FLAGS) -o dist/$(BINARY_NAME)-linux-amd64 .
+	@echo "  → macOS Intel..."
 	GOOS=darwin GOARCH=amd64 go build $(BUILD_FLAGS) -o dist/$(BINARY_NAME)-darwin-amd64 .
+	@echo "  → macOS Apple Silicon..."
 	GOOS=darwin GOARCH=arm64 go build $(BUILD_FLAGS) -o dist/$(BINARY_NAME)-darwin-arm64 .
+	@echo "  → Windows AMD64..."
 	GOOS=windows GOARCH=amd64 go build $(BUILD_FLAGS) -o dist/$(BINARY_NAME)-windows-amd64.exe .
+	@echo "✓ Cross-platform builds complete"
 
 # Create distribution directory
 dist:
