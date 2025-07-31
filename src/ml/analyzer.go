@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/core"
 )
 
 // Analyzer handles activity analysis using the AIAnalyzer

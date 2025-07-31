@@ -1,7 +1,7 @@
 package components
 
 import (
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/core"
 
 	"github.com/charmbracelet/bubbles/table"
 )

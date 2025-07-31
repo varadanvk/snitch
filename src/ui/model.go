@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 
-	"snitch-tui/src/config"
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/config"
+	"github.com/varadanvk/snitch/src/core"
 )
 
 // SnitchCore interface defines the core functionality needed by the UI

@@ -8,7 +8,7 @@ import (
 	"image"
 	"image/png"
 	"net/http"
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/core"
 	"strings"
 	"time"
 )

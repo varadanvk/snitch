@@ -10,18 +10,33 @@ AI productivity monitor with a terminal interface. Watches your screen and tells
 - Configurable settings for apps and intervals
 - Session statistics and activity logs
 
-## Quick Start
+## Installation
+
+### Option 1: Install via Go (Recommended)
 
 ```bash
-git clone https://github.com/yourusername/snitch.git
+curl -sSL https://raw.githubusercontent.com/varadanvk/snitch/main/install.sh | bash
+```
+
+### Option 2: Manual Install
+
+```bash
+go install github.com/varadanvk/snitch@latest
+```
+
+### Option 3: Build from Source
+
+```bash
+git clone https://github.com/varadanvk/snitch.git
 cd snitch
-go build -o snitch-tui main.go
-./snitch-tui
+make build
+./snitch
 ```
 
 ## Setup
 
 You need either:
+
 - **Ollama** (local): Install from https://ollama.ai/, then `ollama pull llava`
 - **Groq** (cloud): Get API key from https://console.groq.com/
 
@@ -34,10 +49,19 @@ Configure through the AI Setup menu in the app.
 - `b/Esc` - Back
 - `q` - Quit
 
-1. Set up AI backend
-2. Set your current task
-3. Start monitoring
-4. Get back to work
+1. Run `snitch` to launch the application
+2. Set up AI backend (Ollama or Groq)
+3. Set your current task
+4. Start monitoring
+5. Get back to work
+
+## Build Commands
+
+- `make build` - Build the binary
+- `make install` - Install globally
+- `make clean` - Clean build artifacts
+- `make test` - Run tests
+- `make build-all` - Build for all platforms
 
 ## License
 

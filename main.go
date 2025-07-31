@@ -8,12 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"snitch-tui/src/config"
-	"snitch-tui/src/core"
-	"snitch-tui/src/ml"
-	"snitch-tui/src/notifications"
-	"snitch-tui/src/ui"
+	"github.com/varadanvk/snitch/src/config"
+	"github.com/varadanvk/snitch/src/core"
+	"github.com/varadanvk/snitch/src/ml"
+	"github.com/varadanvk/snitch/src/notifications"
+	"github.com/varadanvk/snitch/src/ui"
 )
+
+const Version = "v1.0.0"
 
 // SnitchCore manages the core monitoring functionality
 type SnitchCore struct {

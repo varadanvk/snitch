@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/core"
 )
 
 // OllamaRequest represents a request to Ollama API

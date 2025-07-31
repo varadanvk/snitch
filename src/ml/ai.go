@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image"
 	"net/http"
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/core"
 	"time"
 )
 

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"time"
 
-	"snitch-tui/src/core"
+	"github.com/varadanvk/snitch/src/core"
 
 	"github.com/gen2brain/beeep"
 )
