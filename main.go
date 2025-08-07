@@ -169,6 +169,11 @@ func (sc *SnitchCore) GetConfig() *config.Config {
 	return sc.configManager.Get()
 }
 
+// SaveConfig saves the current configuration to disk
+func (sc *SnitchCore) SaveConfig() error {
+	return sc.configManager.Save()
+}
+
 func main() {
 	// Seed random number generator
 	rand.Seed(time.Now().UnixNano())

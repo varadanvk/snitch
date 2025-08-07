@@ -327,8 +327,11 @@ func (m *Model) handleSettingsSave() (tea.Model, tea.Cmd) {
 		m.settingsMessage = "[SUCCESS] Distracting apps updated"
 	}
 
-	// Save configuration - This needs to be implemented by the concrete core type
-	// For now, we'll assume the core handles config saving internally
+	// Save configuration
+	if err := m.core.SaveConfig(); err != nil {
+		m.settingsMessage = fmt.Sprintf("[ERROR] Failed to save: %v", err)
+		return m, nil
+	}
 
 	m.settingsEditing = false
 	m.settingsInput.Blur()
@@ -361,9 +364,13 @@ func (m *Model) updateSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Choose Ollama
 			cfg := m.core.GetConfig()
 			cfg.AIBackend = "ollama"
-			// Save configuration - handled by core
-			m.setupMessage = "[SUCCESS] Ollama backend selected! Make sure Ollama is running with 'ollama pull llava'"
-			m.setupStep = 2
+			// Save configuration
+			if err := m.core.SaveConfig(); err != nil {
+				m.setupMessage = fmt.Sprintf("[ERROR] Failed to save config: %v", err)
+			} else {
+				m.setupMessage = "[SUCCESS] Ollama backend selected! Make sure Ollama is running with 'ollama pull llava'"
+				m.setupStep = 2
+			}
 		}
 	case 1: // Enter Groq API key
 		switch msg.String() {
@@ -381,13 +388,14 @@ func (m *Model) updateSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				cfg := m.core.GetConfig()
 				cfg.GroqAPIKey = apiKey
 				cfg.AIBackend = "groq"
-				// Save configuration - handled by core
-
-				// Recreate analyzer - would be handled by core implementation
-
-				m.setupMessage = "[SUCCESS] Groq API key saved! AI analysis is now enabled."
-				m.setupStep = 2
-				m.textInput.Blur()
+				// Save configuration
+				if err := m.core.SaveConfig(); err != nil {
+					m.setupMessage = fmt.Sprintf("[ERROR] Failed to save config: %v", err)
+				} else {
+					m.setupMessage = "[SUCCESS] Groq API key saved! AI analysis is now enabled."
+					m.setupStep = 2
+					m.textInput.Blur()
+				}
 			} else {
 				m.setupMessage = "[ERROR] Please enter a valid API key (should be longer than 10 characters)"
 			}

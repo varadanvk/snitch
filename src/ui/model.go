@@ -22,6 +22,7 @@ type SnitchCore interface {
 	SetCurrentTask(task string)
 	GetCurrentTask() string
 	GetConfig() *config.Config
+	SaveConfig() error
 }
 
 // Model represents the main TUI model with all state and components
