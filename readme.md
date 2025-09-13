@@ -1,6 +1,6 @@
 # Snitch
 
-AI productivity monitor with a terminal interface. Watches your screen and tells you when you're slacking off. I like to call it a "lock-in" manager
+AI productivity monitor with a terminal interface. Watches your screen and tells you when you're slacking off
 
 ## Features
 
